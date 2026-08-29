@@ -30,6 +30,47 @@
     return (text || "").toUpperCase().replace(/Z/g, "");
   }
 
+  function levenshtein(a, b) {
+    const m = a.length;
+    const n = b.length;
+    const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+    for (let i = 0; i <= m; i++) dp[i][0] = i;
+    for (let j = 0; j <= n; j++) dp[0][j] = j;
+    for (let i = 1; i <= m; i++) {
+      for (let j = 1; j <= n; j++) {
+        dp[i][j] =
+          a[i - 1] === b[j - 1]
+            ? dp[i - 1][j - 1]
+            : 1 + Math.min(dp[i - 1][j - 1], dp[i - 1][j], dp[i][j - 1]);
+      }
+    }
+    return dp[m][n];
+  }
+
+  // A code that doesn't match the legend outright might just be a one-character
+  // OCR misread of one that does (e.g. "0N2" for "DN2"). Only worth trying for
+  // codes of 2+ chars - a single stray character is too ambiguous to correct
+  // safely (every single-char code is "distance 1" from every other one).
+  function fuzzyMatchLegendCode(legend, code) {
+    if (!code || code.length < 2) return null;
+    const keys = Object.keys(legend);
+    let bestKey = null;
+    let bestDist = Infinity;
+    let tie = false;
+    keys.forEach((key) => {
+      const dist = levenshtein(code, key);
+      if (dist < bestDist) {
+        bestDist = dist;
+        bestKey = key;
+        tie = false;
+      } else if (dist === bestDist) {
+        tie = true;
+      }
+    });
+    if (bestKey && bestDist === 1 && !tie) return bestKey;
+    return null;
+  }
+
   function median(nums) {
     const s = nums.slice().sort((a, b) => a - b);
     const mid = Math.floor(s.length / 2);
@@ -278,7 +319,8 @@
         rows.push({ date, weekday, start: "", end: "", note: KNOWN_LEAVE_LABELS[code], rawCode: code });
         continue;
       }
-      const legendEntry = legend[normalizeShiftCode(code)];
+      const normalizedCode = normalizeShiftCode(code);
+      const legendEntry = legend[normalizedCode];
       if (legendEntry) {
         rows.push({
           date,
@@ -290,6 +332,21 @@
         });
         continue;
       }
+
+      const fuzzyKey = fuzzyMatchLegendCode(legend, normalizedCode);
+      if (fuzzyKey) {
+        const fuzzyEntry = legend[fuzzyKey];
+        rows.push({
+          date,
+          weekday,
+          start: fuzzyEntry.start,
+          end: fuzzyEntry.end,
+          note: `${fuzzyEntry.note ? fuzzyEntry.note + "；" : ""}代碼「${code}」疑似為「${fuzzyKey}」，已自動校正，請確認`,
+          rawCode: code,
+        });
+        continue;
+      }
+
       rows.push({
         date,
         weekday,

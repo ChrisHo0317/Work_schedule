@@ -68,6 +68,12 @@
   // very different results. Routing every image through canvas up front,
   // before OCR ever sees it, bakes the correct orientation into plain pixels
   // so recognition is deterministic regardless of device.
+  //
+  // An upscale+contrast preprocessing pass was tried here too, but measured
+  // testing against a real schedule photo showed it made recognition *worse*
+  // (even a same-size no-op round-trip through getImageData/putImageData and
+  // ctx.scale() shifted results) - so it was reverted. Keep this pass exactly
+  // as small as the orientation fix requires.
   el.imageInput.addEventListener("change", async () => {
     const file = el.imageInput.files[0];
     if (!file) return;

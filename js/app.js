@@ -60,12 +60,22 @@
   }
 
   // ---------- Image upload & rotation ----------
-  el.imageInput.addEventListener("change", () => {
+  // Photos straight from a phone camera carry an EXIF orientation tag rather
+  // than physically rotated pixels. <img>/canvas decoding applies that tag
+  // consistently, but Tesseract's own image loader does not always do so the
+  // same way across browsers/platforms - so a phone photo and its "identical"
+  // desktop copy could be fed to OCR at different orientations and produce
+  // very different results. Routing every image through canvas up front,
+  // before OCR ever sees it, bakes the correct orientation into plain pixels
+  // so recognition is deterministic regardless of device.
+  el.imageInput.addEventListener("change", async () => {
     const file = el.imageInput.files[0];
     if (!file) return;
-    state.imageBlob = file;
+    el.recognizeBtn.disabled = true;
+    const normalized = await rotateImage(file, 0);
+    state.imageBlob = normalized;
     state.rotation = 0;
-    showPreview(file);
+    showPreview(normalized);
     el.rotateBtn.hidden = false;
     el.recognizeBtn.disabled = false;
   });
@@ -96,7 +106,9 @@
         ctx.translate(canvas.width / 2, canvas.height / 2);
         ctx.rotate(rad);
         ctx.drawImage(img, -img.width / 2, -img.height / 2);
-        canvas.toBlob((newBlob) => resolve(newBlob), "image/jpeg", 0.92);
+        // Lossless: a JPEG re-encode here measurably hurt OCR accuracy on
+        // already-clean screenshots (compression artifacts on fine text).
+        canvas.toBlob((newBlob) => resolve(newBlob), "image/png");
       };
       img.src = URL.createObjectURL(blob);
     });

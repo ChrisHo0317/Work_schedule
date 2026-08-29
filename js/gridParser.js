@@ -259,10 +259,20 @@
     const rows = [];
     for (let day = 1; day <= daysInMonth; day++) {
       const cell = byDay[day];
-      if (!cell || !cell.text) continue;
-      const code = cell.text;
       const date = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
       const weekday = "日一二三四五六"[new Date(date + "T00:00:00").getDay()];
+
+      // Cells at the left/right edge of the table (day 1, the last day) are
+      // the ones most likely to be clipped or blurred out of frame, so OCR
+      // misses them more often than interior days. Rather than silently
+      // dropping the date from the results (easy to miss you're even short a
+      // day), always emit a row - blank and flagged - so it shows up in the
+      // editable table ready to fill in by hand.
+      if (!cell || !cell.text) {
+        rows.push({ date, weekday, start: "", end: "", note: "未辨識到，請確認", rawCode: "" });
+        continue;
+      }
+      const code = cell.text;
 
       if (KNOWN_LEAVE_LABELS[code]) {
         rows.push({ date, weekday, start: "", end: "", note: KNOWN_LEAVE_LABELS[code], rawCode: code });

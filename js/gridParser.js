@@ -6,10 +6,16 @@
  */
 (function (root) {
   const LABEL_COLUMN_MAX_X = 160; // employee-name / row-label column ends here
+  // Keys include common OCR look-alikes of the real characters ("体" for 休,
+  // "囯" for 國), since at this text size Tesseract regularly returns the
+  // variant form and they carry no other meaning in this table.
   const KNOWN_LEAVE_LABELS = {
     "休": "公休",
+    "体": "公休",
     "例": "例假",
+    "囫": "例假",
     "國": "國定假日",
+    "囯": "國定假日",
   };
 
   function cleanToken(text) {

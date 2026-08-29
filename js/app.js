@@ -2,6 +2,8 @@
   const today = new Date();
   const state = {
     imageBlob: null,
+    sourceFile: null,
+    exifOrientation: 1,
     rotation: 0,
     rows: [],
     gridAnalysis: null,
@@ -60,28 +62,33 @@
   }
 
   // ---------- Image upload & rotation ----------
-  // Photos straight from a phone camera carry an EXIF orientation tag rather
-  // than physically rotated pixels. <img>/canvas decoding applies that tag
-  // consistently, but Tesseract's own image loader does not always do so the
-  // same way across browsers/platforms - so a phone photo and its "identical"
-  // desktop copy could be fed to OCR at different orientations and produce
-  // very different results. Routing every image through canvas up front,
-  // before OCR ever sees it, bakes the correct orientation into plain pixels
-  // so recognition is deterministic regardless of device.
+  // A canvas round-trip is NOT free for OCR accuracy. Two visually identical
+  // 1545x682 screenshots of the same schedule behaved completely differently:
+  // one was unaffected, while for the other the re-encode made Tesseract start
+  // reading the table's gridlines as "|" characters, gluing several day cells
+  // into one word ("NIDIAIN") and wrecking the whole row. So the canvas pass is
+  // now used only when it actually has a job to do:
   //
-  // An upscale+contrast preprocessing pass was tried here too, but measured
-  // testing against a real schedule photo showed it made recognition *worse*
-  // (even a same-size no-op round-trip through getImageData/putImageData and
-  // ctx.scale() shifted results) - so it was reverted. Keep this pass exactly
-  // as small as the orientation fix requires.
+  //   - EXIF orientation != 1: the pixels need the browser's oriented decode
+  //     baked in, so OCR sees the same thing regardless of how its own loader
+  //     handles the tag.
+  //   - Oversized image: a full-resolution phone photo (12MP+, 3000-4000px per
+  //     side) can exceed iOS Safari's canvas limits and render corrupted rather
+  //     than erroring, which matches a reported case of OCR "completing" but
+  //     returning garbage.
+  //   - The user pressed rotate.
+  //
+  // Otherwise the original file goes to OCR untouched, which measurably reads
+  // better. (An upscale+contrast pass was also tried here and reverted - it
+  // made recognition worse for the same reason.)
   el.imageInput.addEventListener("change", async () => {
     const file = el.imageInput.files[0];
     if (!file) return;
     el.recognizeBtn.disabled = true;
-    const normalized = await rotateImage(file, 0);
-    state.imageBlob = normalized;
+    state.sourceFile = file;
     state.rotation = 0;
-    showPreview(normalized);
+    state.exifOrientation = await readExifOrientation(file);
+    await applySourceImage();
     el.rotateBtn.hidden = false;
     el.recognizeBtn.disabled = false;
   });
@@ -94,20 +101,73 @@
 
   el.rotateBtn.addEventListener("click", async () => {
     state.rotation = (state.rotation + 90) % 360;
-    const rotatedBlob = await rotateImage(state.imageBlob, 90);
-    state.imageBlob = rotatedBlob;
-    showPreview(rotatedBlob);
+    await applySourceImage();
   });
 
-  // A full-resolution phone camera photo (12MP+, ~3000-4000px per side) is far
-  // larger than anything tested against so far (~1500px screenshots), and iOS
-  // Safari specifically has known canvas size/memory limits desktop browsers
-  // don't hit the same way - a canvas that large can render corrupted/blank
-  // instead of erroring, which would explain OCR "completing" but on garbage
-  // pixel data. Downscaling to a size still far larger than this table's text
-  // needs sidesteps that without touching anything for already-small images
-  // (scale stays exactly 1, so the canvas call is skipped and the code path
-  // is byte-for-byte what was already validated).
+  // Always rebuild from the pristine source file rather than from the previous
+  // result, so repeated rotations never stack canvas re-encodes on top of
+  // each other.
+  async function applySourceImage() {
+    const file = state.sourceFile;
+    const { width, height } = await getImageSize(file);
+    const oversized = Math.max(width, height) > MAX_DIMENSION;
+    const needsCanvas =
+      state.rotation !== 0 || state.exifOrientation !== 1 || oversized;
+
+    const prepared = needsCanvas ? await rotateImage(file, state.rotation) : file;
+    state.imageBlob = prepared;
+    showPreview(prepared);
+  }
+
+  function getImageSize(blob) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+      img.onerror = () => resolve({ width: 0, height: 0 });
+      img.src = URL.createObjectURL(blob);
+    });
+  }
+
+  // Returns the JPEG EXIF orientation (1-8), defaulting to 1 ("upright, no
+  // correction needed") for non-JPEGs or anything unparseable.
+  function readExifOrientation(blob) {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const view = new DataView(reader.result);
+          if (view.getUint16(0, false) !== 0xffd8) return resolve(1); // not JPEG
+          let offset = 2;
+          while (offset < view.byteLength - 1) {
+            const marker = view.getUint16(offset, false);
+            if ((marker & 0xff00) !== 0xff00) break;
+            if (marker === 0xffe1) {
+              // APP1; confirm it's "Exif" and not XMP before walking the IFD
+              if (view.getUint32(offset + 4, false) !== 0x45786966) break;
+              const tiff = offset + 10;
+              const little = view.getUint16(tiff, false) === 0x4949;
+              const ifd = tiff + view.getUint32(tiff + 4, little);
+              const entries = view.getUint16(ifd, little);
+              for (let i = 0; i < entries; i++) {
+                const entry = ifd + 2 + i * 12;
+                if (view.getUint16(entry, little) === 0x0112) {
+                  return resolve(view.getUint16(entry + 8, little) || 1);
+                }
+              }
+              break;
+            }
+            offset += 2 + view.getUint16(offset + 2, false);
+          }
+        } catch (e) {
+          // fall through to the safe default
+        }
+        resolve(1);
+      };
+      reader.onerror = () => resolve(1);
+      reader.readAsArrayBuffer(blob.slice(0, 128 * 1024)); // EXIF lives up front
+    });
+  }
+
   const MAX_DIMENSION = 2400;
 
   function rotateImage(blob, degrees) {

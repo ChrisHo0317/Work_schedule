@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+<title>班表小幫手</title>
+
+<meta name="theme-color" content="#1f6feb" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="班表小幫手" />
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+<link rel="manifest" href="manifest.json" />
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<header class="app-header">
+  <h1>班表小幫手</h1>
+</header>
+
+<main id="view-upload" class="view active">
+  <section class="card">
+    <h2>1. 選擇班表圖片</h2>
+    <div class="file-actions">
+      <label class="btn btn-primary">
+        拍照 / 選擇圖片
+        <input type="file" id="imageInput" accept="image/*" capture="environment" hidden />
+      </label>
+      <button id="rotateBtn" class="btn btn-secondary" hidden>旋轉 90°</button>
+    </div>
+    <div id="previewWrap" class="preview-wrap" hidden>
+      <img id="previewImg" alt="班表預覽" />
+    </div>
+  </section>
+
+  <section class="card">
+    <button id="recognizeBtn" class="btn btn-primary btn-block" disabled>2. 開始辨識文字</button>
+    <div id="progressWrap" class="progress-wrap" hidden>
+      <div class="progress-bar"><div id="progressFill" class="progress-fill"></div></div>
+      <p id="progressLabel" class="progress-label">準備中…</p>
+    </div>
+  </section>
+
+  <section id="nameSelectSection" class="card" hidden>
+    <h2>3. 選擇你的姓名</h2>
+    <p class="hint">圖片中辨識到以下幾列，請點選哪一列是你的班表。</p>
+    <div id="nameCandidateList" class="name-candidate-list"></div>
+    <details class="raw-text-details">
+      <summary>找不到我的名字／清單不正確？手動輸入</summary>
+      <div class="manual-name-row">
+        <input type="text" id="manualNameInput" placeholder="輸入圖片上顯示的姓名片段" />
+        <button id="manualNameConfirmBtn" class="btn btn-secondary">確認</button>
+      </div>
+    </details>
+  </section>
+
+  <section id="resultSection" class="card" hidden>
+    <h2>4. 確認與修正班表</h2>
+    <p class="hint">自動辨識可能不完全準確，請檢查每一列並修正日期、時間，或手動新增／刪除列。</p>
+    <div class="table-scroll">
+      <table id="shiftTable">
+        <thead>
+          <tr>
+            <th>日期</th>
+            <th>星期</th>
+            <th>上班</th>
+            <th>下班</th>
+            <th>備註</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="shiftTableBody"></tbody>
+      </table>
+    </div>
+    <button id="addRowBtn" class="btn btn-secondary btn-block">+ 新增一列</button>
+
+    <details class="raw-text-details">
+      <summary>顯示原始辨識文字（除錯用）</summary>
+      <pre id="rawTextOutput"></pre>
+    </details>
+
+    <button id="saveBtn" class="btn btn-primary btn-block">儲存班表</button>
+  </section>
+</main>
+
+<main id="view-list" class="view">
+  <section class="card">
+    <h2>本週</h2>
+    <div id="weekRow" class="week-row"></div>
+  </section>
+
+  <section class="card">
+    <div class="month-nav">
+      <button id="prevMonthBtn" class="btn btn-secondary month-nav-btn">‹</button>
+      <h2 id="monthTitle"></h2>
+      <button id="nextMonthBtn" class="btn btn-secondary month-nav-btn">›</button>
+    </div>
+    <div class="calendar-weekday-header">
+      <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
+    </div>
+    <div id="calendarGrid" class="calendar-grid"></div>
+    <p id="emptyState" class="hint" hidden>目前還沒有任何班表，請到「上傳」頁面新增，或直接點選日期新增。</p>
+  </section>
+
+  <section id="dayDetailCard" class="card" hidden>
+    <div class="day-detail-header">
+      <div>
+        <div id="dayDetailDate" class="shift-date"></div>
+        <div id="dayDetailTime" class="shift-time"></div>
+        <div id="dayDetailNote" class="shift-note"></div>
+      </div>
+      <div class="shift-actions">
+        <button id="dayDetailEditBtn" class="edit-btn">編輯</button>
+        <button id="dayDetailDeleteBtn" class="delete-btn">刪除</button>
+      </div>
+    </div>
+    <div id="dayTimelineWrap"></div>
+  </section>
+</main>
+
+<main id="view-about" class="view">
+  <section class="card">
+    <h2>使用說明</h2>
+    <ul class="about-list">
+      <li>圖片辨識完全在你的手機／瀏覽器內執行，不會把圖片上傳到任何伺服器。</li>
+      <li>班表資料只會儲存在這台裝置的瀏覽器內（localStorage），換裝置或清除瀏覽器資料會消失。</li>
+      <li>目前針對「員工 × 日期矩陣＋代碼對照表」格式的班表做特化辨識。辨識完成後會列出圖片中偵測到的所有姓名，點選其中一個即可讀取那一列的班表，不會顯示其他員工的班表內容。</li>
+      <li>若清單中找不到你的名字，可以在「手動輸入」欄位輸入圖片上顯示的姓名/暱稱片段（例如「Pinki」）來讀取。</li>
+      <li>自動辨識仍可能有誤判或漏抓（例如某天完全沒抓到、或代碼對不到時間），請務必檢查表格內容，有問題可手動修正或新增列。</li>
+      <li>在 iPhone Safari 開啟本頁後，可點選分享圖示 → 「加入主畫面」，之後就能像 App 一樣開啟。</li>
+    </ul>
+  </section>
+</main>
+
+<nav class="tab-bar">
+  <button class="tab-btn active" data-view="view-upload">📷<span>上傳</span></button>
+  <button class="tab-btn" data-view="view-list">📋<span>班表</span></button>
+  <button class="tab-btn" data-view="view-about">ℹ️<span>說明</span></button>
+</nav>
+
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/tesseract.min.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/parser.js"></script>
+<script src="js/gridParser.js"></script>
+<script src="js/ocr.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

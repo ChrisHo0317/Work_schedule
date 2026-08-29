@@ -99,18 +99,35 @@
     showPreview(rotatedBlob);
   });
 
+  // A full-resolution phone camera photo (12MP+, ~3000-4000px per side) is far
+  // larger than anything tested against so far (~1500px screenshots), and iOS
+  // Safari specifically has known canvas size/memory limits desktop browsers
+  // don't hit the same way - a canvas that large can render corrupted/blank
+  // instead of erroring, which would explain OCR "completing" but on garbage
+  // pixel data. Downscaling to a size still far larger than this table's text
+  // needs sidesteps that without touching anything for already-small images
+  // (scale stays exactly 1, so the canvas call is skipped and the code path
+  // is byte-for-byte what was already validated).
+  const MAX_DIMENSION = 2400;
+
   function rotateImage(blob, degrees) {
     return new Promise((resolve) => {
       const img = new Image();
       img.onload = () => {
         const rad = (degrees * Math.PI) / 180;
         const swap = degrees % 180 !== 0;
+        const rotatedWidth = swap ? img.height : img.width;
+        const rotatedHeight = swap ? img.width : img.height;
+        const longestSide = Math.max(rotatedWidth, rotatedHeight);
+        const scale = longestSide > MAX_DIMENSION ? MAX_DIMENSION / longestSide : 1;
+
         const canvas = document.createElement("canvas");
-        canvas.width = swap ? img.height : img.width;
-        canvas.height = swap ? img.width : img.height;
+        canvas.width = Math.round(rotatedWidth * scale);
+        canvas.height = Math.round(rotatedHeight * scale);
         const ctx = canvas.getContext("2d");
         ctx.translate(canvas.width / 2, canvas.height / 2);
         ctx.rotate(rad);
+        if (scale !== 1) ctx.scale(scale, scale);
         ctx.drawImage(img, -img.width / 2, -img.height / 2);
         // Lossless: a JPEG re-encode here measurably hurt OCR accuracy on
         // already-clean screenshots (compression artifacts on fine text).

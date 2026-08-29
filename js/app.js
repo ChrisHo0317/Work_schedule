@@ -611,5 +611,8 @@
     });
   }
 
+  document.getElementById("appVersion").textContent =
+    typeof APP_VERSION === "string" ? APP_VERSION : "";
+
   renderCalendarView();
 })();

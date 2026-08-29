@@ -1,9 +1,16 @@
-const CACHE_NAME = "work-schedule-v2";
+// Share the one version constant with the page, so bumping js/version.js also
+// renames the cache here - old caches are dropped on activate, which is what
+// makes the version shown in the header a trustworthy signal that the update
+// actually landed rather than a number baked into a stale cached page.
+importScripts("js/version.js");
+
+const CACHE_NAME = "work-schedule-" + APP_VERSION;
 const APP_SHELL = [
   "./",
   "index.html",
   "manifest.json",
   "css/style.css",
+  "js/version.js",
   "js/app.js",
   "js/ocr.js",
   "js/parser.js",

@@ -220,20 +220,38 @@ td input[type="date"], td input[type="time"] { min-width: 108px; }
 
 .about-list { padding-left: 18px; font-size: 0.9rem; line-height: 1.6; }
 
+/* iOS-style frosted glass tab bar: translucent + blurred + saturated, so
+   whatever scrolls underneath still tints through it, like the system
+   tab bar material rather than a flat opaque panel. */
 .tab-bar {
   position: fixed;
   bottom: 0; left: 0; right: 0;
   display: flex;
-  background: var(--card-bg);
-  border-top: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.72);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  border-top: 0.5px solid rgba(0, 0, 0, 0.15);
+  box-shadow: 0 -1px 12px rgba(0, 0, 0, 0.04);
   padding-bottom: env(safe-area-inset-bottom);
   z-index: 10;
+}
+@media (prefers-color-scheme: dark) {
+  .tab-bar {
+    background: rgba(22, 22, 26, 0.72);
+    border-top-color: rgba(255, 255, 255, 0.12);
+    box-shadow: 0 -1px 12px rgba(0, 0, 0, 0.3);
+  }
+}
+@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  /* Browsers without blur support get a solid bar instead of a washed-out
+     transparent one sitting over scrolling content. */
+  .tab-bar { background: var(--card-bg); }
 }
 .tab-btn {
   flex: 1;
   border: none;
   background: none;
-  padding: 8px 0 6px;
+  padding: 6px 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -242,5 +260,15 @@ td input[type="date"], td input[type="time"] { min-width: 108px; }
   color: var(--muted);
   cursor: pointer;
 }
-.tab-btn span { font-size: 0.68rem; }
+.tab-btn .tab-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 30px;
+  border-radius: 15px;
+  transition: background-color 0.15s ease;
+}
+.tab-btn span:last-child { font-size: 0.68rem; margin-top: 1px; }
 .tab-btn.active { color: var(--primary); }
+.tab-btn.active .tab-icon { background: color-mix(in srgb, var(--primary) 16%, transparent); }

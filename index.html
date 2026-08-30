@@ -20,7 +20,42 @@
   <span id="appVersion" class="app-version"></span>
 </header>
 
-<main id="view-upload" class="view active">
+<main id="view-list" class="view active">
+  <section class="card">
+    <h2>本週</h2>
+    <div id="weekRow" class="week-row"></div>
+  </section>
+
+  <section class="card">
+    <div class="month-nav">
+      <button id="prevMonthBtn" class="btn btn-secondary month-nav-btn">‹</button>
+      <h2 id="monthTitle"></h2>
+      <button id="nextMonthBtn" class="btn btn-secondary month-nav-btn">›</button>
+    </div>
+    <div class="calendar-weekday-header">
+      <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
+    </div>
+    <div id="calendarGrid" class="calendar-grid"></div>
+    <p id="emptyState" class="hint" hidden>目前還沒有任何班表，請到「上傳」頁面新增，或直接點選日期新增。</p>
+  </section>
+
+  <section id="dayDetailCard" class="card" hidden>
+    <div class="day-detail-header">
+      <div>
+        <div id="dayDetailDate" class="shift-date"></div>
+        <div id="dayDetailTime" class="shift-time"></div>
+        <div id="dayDetailNote" class="shift-note"></div>
+      </div>
+      <div class="shift-actions">
+        <button id="dayDetailEditBtn" class="edit-btn">編輯</button>
+        <button id="dayDetailDeleteBtn" class="delete-btn">刪除</button>
+      </div>
+    </div>
+    <div id="dayTimelineWrap"></div>
+  </section>
+</main>
+
+<main id="view-upload" class="view">
   <section class="card">
     <h2>1. 選擇班表圖片</h2>
     <div class="file-actions">
@@ -86,41 +121,6 @@
   </section>
 </main>
 
-<main id="view-list" class="view">
-  <section class="card">
-    <h2>本週</h2>
-    <div id="weekRow" class="week-row"></div>
-  </section>
-
-  <section class="card">
-    <div class="month-nav">
-      <button id="prevMonthBtn" class="btn btn-secondary month-nav-btn">‹</button>
-      <h2 id="monthTitle"></h2>
-      <button id="nextMonthBtn" class="btn btn-secondary month-nav-btn">›</button>
-    </div>
-    <div class="calendar-weekday-header">
-      <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
-    </div>
-    <div id="calendarGrid" class="calendar-grid"></div>
-    <p id="emptyState" class="hint" hidden>目前還沒有任何班表，請到「上傳」頁面新增，或直接點選日期新增。</p>
-  </section>
-
-  <section id="dayDetailCard" class="card" hidden>
-    <div class="day-detail-header">
-      <div>
-        <div id="dayDetailDate" class="shift-date"></div>
-        <div id="dayDetailTime" class="shift-time"></div>
-        <div id="dayDetailNote" class="shift-note"></div>
-      </div>
-      <div class="shift-actions">
-        <button id="dayDetailEditBtn" class="edit-btn">編輯</button>
-        <button id="dayDetailDeleteBtn" class="delete-btn">刪除</button>
-      </div>
-    </div>
-    <div id="dayTimelineWrap"></div>
-  </section>
-</main>
-
 <main id="view-about" class="view">
   <section class="card">
     <h2>使用說明</h2>
@@ -136,9 +136,9 @@
 </main>
 
 <nav class="tab-bar">
-  <button class="tab-btn active" data-view="view-upload">📷<span>上傳</span></button>
-  <button class="tab-btn" data-view="view-list">📋<span>班表</span></button>
-  <button class="tab-btn" data-view="view-about">ℹ️<span>說明</span></button>
+  <button class="tab-btn active" data-view="view-list"><span class="tab-icon">📋</span><span>班表</span></button>
+  <button class="tab-btn" data-view="view-upload"><span class="tab-icon">📷</span><span>上傳</span></button>
+  <button class="tab-btn" data-view="view-about"><span class="tab-icon">ℹ️</span><span>說明</span></button>
 </nav>
 
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/tesseract.min.js"></script>

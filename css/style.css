@@ -32,7 +32,9 @@ html, body {
 }
 
 body {
-  padding-bottom: calc(64px + env(safe-area-inset-bottom));
+  /* Clears the floating tab bar: its own height plus the gap it sits above
+     the safe-area inset by. */
+  padding-bottom: calc(88px + env(safe-area-inset-bottom));
   min-height: 100vh;
 }
 
@@ -220,55 +222,64 @@ td input[type="date"], td input[type="time"] { min-width: 108px; }
 
 .about-list { padding-left: 18px; font-size: 0.9rem; line-height: 1.6; }
 
-/* iOS-style frosted glass tab bar: translucent + blurred + saturated, so
-   whatever scrolls underneath still tints through it, like the system
-   tab bar material rather than a flat opaque panel. */
+/* Floating frosted-glass pill tab bar (LINE-style): detached from the screen
+   edge with a capsule silhouette, heavy blur so content scrolling underneath
+   tints through it, and a filled capsule marking the active tab. */
 .tab-bar {
   position: fixed;
-  bottom: 0; left: 0; right: 0;
+  bottom: calc(10px + env(safe-area-inset-bottom));
+  left: 12px;
+  right: 12px;
   display: flex;
-  background: rgba(255, 255, 255, 0.72);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  backdrop-filter: blur(20px) saturate(180%);
-  border-top: 0.5px solid rgba(0, 0, 0, 0.15);
-  box-shadow: 0 -1px 12px rgba(0, 0, 0, 0.04);
-  padding-bottom: env(safe-area-inset-bottom);
+  gap: 4px;
+  padding: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.6);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
+  border: 0.5px solid rgba(255, 255, 255, 0.55);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.14), 0 1px 3px rgba(0, 0, 0, 0.06);
   z-index: 10;
 }
 @media (prefers-color-scheme: dark) {
   .tab-bar {
-    background: rgba(22, 22, 26, 0.72);
-    border-top-color: rgba(255, 255, 255, 0.12);
-    box-shadow: 0 -1px 12px rgba(0, 0, 0, 0.3);
+    background: rgba(30, 32, 38, 0.6);
+    border-color: rgba(255, 255, 255, 0.12);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
   }
 }
 @supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
-  /* Browsers without blur support get a solid bar instead of a washed-out
-     transparent one sitting over scrolling content. */
+  /* Without blur support a translucent bar just looks washed out over
+     scrolling content, so fall back to the solid surface. */
   .tab-bar { background: var(--card-bg); }
 }
+
 .tab-btn {
   flex: 1;
   border: none;
   background: none;
-  padding: 6px 0;
+  padding: 7px 0 6px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
-  font-size: 1.2rem;
-  color: var(--muted);
+  gap: 3px;
+  color: var(--text);
   cursor: pointer;
+  border-radius: 999px;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 0.18s ease, color 0.18s ease;
 }
-.tab-btn .tab-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 46px;
-  height: 30px;
-  border-radius: 15px;
-  transition: background-color 0.15s ease;
-}
-.tab-btn span:last-child { font-size: 0.68rem; margin-top: 1px; }
+.tab-icon { width: 23px; height: 23px; display: block; }
+.tab-label { font-size: 0.68rem; font-weight: 600; letter-spacing: 0.02em; }
+
 .tab-btn.active { color: var(--primary); }
-.tab-btn.active .tab-icon { background: color-mix(in srgb, var(--primary) 16%, transparent); }
+.tab-btn.active {
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
+}
+@media (prefers-color-scheme: dark) {
+  .tab-btn { color: var(--muted); }
+  .tab-btn.active {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.16);
+  }
+}

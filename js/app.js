@@ -45,6 +45,7 @@
     manualNameInput: document.getElementById("manualNameInput"),
     manualNameConfirmBtn: document.getElementById("manualNameConfirmBtn"),
     tabBtns: document.querySelectorAll(".tab-btn"),
+    tabIndicator: document.querySelector(".tab-indicator"),
     views: document.querySelectorAll(".view"),
   };
 
@@ -58,8 +59,28 @@
     el.tabBtns.forEach((b) =>
       b.classList.toggle("active", b.dataset.view === viewId)
     );
+    moveTabIndicator();
     if (viewId === "view-list") renderCalendarView();
   }
+
+  // Park the shared highlight over whichever tab is active. Driven from JS
+  // because the indicator has to know the button's measured position; the
+  // easing lives in CSS.
+  function moveTabIndicator() {
+    const active = document.querySelector(".tab-btn.active");
+    if (!active || !el.tabIndicator) return;
+    el.tabIndicator.style.width = active.offsetWidth + "px";
+    el.tabIndicator.style.transform = `translateX(${active.offsetLeft}px)`;
+  }
+
+  // The very first placement must not animate, or the highlight visibly flies
+  // in from the left edge on load; enable the transition only afterwards.
+  function initTabIndicator() {
+    moveTabIndicator();
+    requestAnimationFrame(() => el.tabIndicator.classList.add("animate"));
+  }
+
+  window.addEventListener("resize", moveTabIndicator);
 
   // ---------- Image upload & rotation ----------
   // A canvas round-trip is NOT free for OCR accuracy. Two visually identical
@@ -662,4 +683,5 @@
     typeof APP_VERSION === "string" ? APP_VERSION : "";
 
   renderCalendarView();
+  initTabIndicator();
 })();

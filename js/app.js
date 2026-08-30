@@ -309,14 +309,37 @@
     };
   }
 
+  // When a scan is too unclear to resolve automatically, offer the time
+  // ranges already known to be real shifts - from this image's own legend
+  // table (if OCR got that far) plus every distinct start/end pair already
+  // saved from past months - so fixing a blank row is usually one tap
+  // instead of dialing in a time picker. The native inputs stay right next
+  // to it for whenever the pick needs adjusting.
+  function getKnownTimeRanges() {
+    const seen = new Map(); // "start|end" -> {start, end}
+    const add = (start, end) => {
+      if (!start || !end) return;
+      const key = start + "|" + end;
+      if (!seen.has(key)) seen.set(key, { start, end });
+    };
+
+    if (state.gridAnalysis && state.gridAnalysis.legend) {
+      Object.values(state.gridAnalysis.legend).forEach((entry) => add(entry.start, entry.end));
+    }
+    Storage.getAll().forEach((shift) => add(shift.start, shift.end));
+
+    return Array.from(seen.values()).sort((a, b) => a.start.localeCompare(b.start));
+  }
+
   function renderTable() {
     el.shiftTableBody.innerHTML = "";
+    const knownRanges = getKnownTimeRanges();
     state.rows.forEach((row) => {
-      el.shiftTableBody.appendChild(buildRowEl(row));
+      el.shiftTableBody.appendChild(buildRowEl(row, knownRanges));
     });
   }
 
-  function buildRowEl(row) {
+  function buildRowEl(row, knownRanges) {
     const tr = document.createElement("tr");
     tr.dataset.id = row.id;
 
@@ -335,6 +358,30 @@
     const weekdaySpan = document.createElement("span");
     weekdaySpan.textContent = row.weekday || "";
     weekdayTd.appendChild(weekdaySpan);
+
+    const quickTd = document.createElement("td");
+    const quickSelect = document.createElement("select");
+    quickSelect.className = "quick-time-select";
+    const placeholder = document.createElement("option");
+    placeholder.textContent = "套用...";
+    placeholder.value = "";
+    quickSelect.appendChild(placeholder);
+    (knownRanges || []).forEach((range, i) => {
+      const opt = document.createElement("option");
+      opt.value = String(i);
+      opt.textContent = `${range.start} - ${range.end}`;
+      quickSelect.appendChild(opt);
+    });
+    quickSelect.addEventListener("change", () => {
+      const range = knownRanges[Number(quickSelect.value)];
+      if (!range) return;
+      row.start = range.start;
+      row.end = range.end;
+      startInput.value = range.start;
+      endInput.value = range.end;
+      quickSelect.value = "";
+    });
+    quickTd.appendChild(quickSelect);
 
     const startTd = document.createElement("td");
     const startInput = document.createElement("input");
@@ -368,7 +415,7 @@
     });
     actionTd.appendChild(delBtn);
 
-    tr.append(dateTd, weekdayTd, startTd, endTd, noteTd, actionTd);
+    tr.append(dateTd, weekdayTd, quickTd, startTd, endTd, noteTd, actionTd);
     return tr;
   }
 

@@ -94,6 +94,7 @@ table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
 th, td { border: 1px solid var(--border); padding: 6px; text-align: left; white-space: nowrap; }
 td input { width: 100%; min-width: 78px; border: 1px solid var(--border); border-radius: 6px; padding: 6px; font-size: 0.85rem; background: var(--bg); color: var(--text); }
 td input[type="date"], td input[type="time"] { min-width: 108px; }
+.quick-time-select { width: 100%; min-width: 110px; border: 1px solid var(--border); border-radius: 6px; padding: 6px; font-size: 0.85rem; background: var(--bg); color: var(--text); }
 .row-delete-btn { background: none; border: none; color: var(--danger); font-size: 1.1rem; cursor: pointer; }
 
 .name-candidate-list { display: flex; flex-direction: column; gap: 8px; }

@@ -315,14 +315,26 @@
       // dropping the date from the results (easy to miss you're even short a
       // day), always emit a row - blank and flagged - so it shows up in the
       // editable table ready to fill in by hand.
+      // Each row carries both `rawCode` (literally what OCR read in the cell)
+      // and `code` (the shift code it actually resolved to). They differ when
+      // a misread is corrected - "DN9" read, "DN2" resolved - and it's the
+      // resolved one that's meaningful to show as a label later.
       if (!cell || !cell.text) {
-        rows.push({ date, weekday, start: "", end: "", note: "未辨識到，請確認", rawCode: "" });
+        rows.push({ date, weekday, start: "", end: "", note: "未辨識到，請確認", rawCode: "", code: "" });
         continue;
       }
       const code = cell.text;
 
       if (KNOWN_LEAVE_LABELS[code]) {
-        rows.push({ date, weekday, start: "", end: "", note: KNOWN_LEAVE_LABELS[code], rawCode: code });
+        rows.push({
+          date,
+          weekday,
+          start: "",
+          end: "",
+          note: KNOWN_LEAVE_LABELS[code],
+          rawCode: code,
+          code: "",
+        });
         continue;
       }
       const normalizedCode = normalizeShiftCode(code);
@@ -335,6 +347,7 @@
           end: legendEntry.end,
           note: legendEntry.note || "",
           rawCode: code,
+          code: normalizedCode,
         });
         continue;
       }
@@ -349,6 +362,7 @@
           end: fuzzyEntry.end,
           note: `${fuzzyEntry.note ? fuzzyEntry.note + "；" : ""}代碼「${code}」疑似為「${fuzzyKey}」，已自動校正，請確認`,
           rawCode: code,
+          code: fuzzyKey,
         });
         continue;
       }
@@ -360,6 +374,7 @@
         end: "",
         note: `代碼「${code}」需手動確認時間`,
         rawCode: code,
+        code: "",
       });
     }
     return rows;

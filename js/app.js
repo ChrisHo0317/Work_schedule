@@ -295,6 +295,11 @@
       start: r.start,
       end: r.end,
       note: r.note,
+      // Kept so a saved shift still knows which shift code it came from, which
+      // is what lets the quick-apply list label past times (e.g. "N4") even
+      // when no scan is loaded. Records saved before this existed simply
+      // won't have it.
+      code: r.code || "",
     }));
     if (state.rows.length === 0) state.rows.push(emptyRow());
     renderTable();
@@ -337,19 +342,31 @@
   // instead of dialing in a time picker. The native inputs stay right next
   // to it for whenever the pick needs adjusting.
   function getKnownTimeRanges() {
-    const seen = new Map(); // "start|end" -> {start, end}
-    const add = (start, end) => {
+    const seen = new Map(); // "start|end" -> {start, end, codes:Set}
+    const add = (start, end, code) => {
       if (!start || !end) return;
       const key = start + "|" + end;
-      if (!seen.has(key)) seen.set(key, { start, end });
+      if (!seen.has(key)) seen.set(key, { start, end, codes: new Set() });
+      // A time range can be reachable under more than one shift code, so
+      // collect them all rather than letting the first one win.
+      if (code) seen.get(key).codes.add(code);
     };
 
     if (state.gridAnalysis && state.gridAnalysis.legend) {
-      Object.values(state.gridAnalysis.legend).forEach((entry) => add(entry.start, entry.end));
+      Object.values(state.gridAnalysis.legend).forEach((entry) =>
+        add(entry.start, entry.end, entry.code)
+      );
     }
-    Storage.getAll().forEach((shift) => add(shift.start, shift.end));
+    Storage.getAll().forEach((shift) => add(shift.start, shift.end, shift.code));
 
-    return Array.from(seen.values()).sort((a, b) => a.start.localeCompare(b.start));
+    return Array.from(seen.values())
+      .map((r) => ({ start: r.start, end: r.end, codes: Array.from(r.codes).sort() }))
+      .sort((a, b) => a.start.localeCompare(b.start));
+  }
+
+  function timeRangeLabel(range) {
+    const time = `${range.start} - ${range.end}`;
+    return range.codes.length ? `${range.codes.join("/")}  ${time}` : time;
   }
 
   function renderTable() {
@@ -390,7 +407,7 @@
     (knownRanges || []).forEach((range, i) => {
       const opt = document.createElement("option");
       opt.value = String(i);
-      opt.textContent = `${range.start} - ${range.end}`;
+      opt.textContent = timeRangeLabel(range);
       quickSelect.appendChild(opt);
     });
     quickSelect.addEventListener("change", () => {
